@@ -1,1 +1,14 @@
 claude_code_spec.md
+
+# Foundry build artifacts and dependencies
+contract/out/
+contract/cache/
+contract/lib/
+
+# Web dependencies and build output
+web/node_modules/
+web/dist/
+
+# OS / editor noise
+.DS_Store
+.claude/

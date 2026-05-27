@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aiden — Onchain NPC Demo</title>
+  <style>
+    /* Reset: no scroll bars, canvas fills the whole window */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; overflow: hidden; font-family: monospace; color: #fff; }
+
+    /* The Three.js renderer mounts its <canvas> here */
+    #canvas-container { position: fixed; inset: 0; }
+
+    /* ── Overlay UI ─────────────────────────────────────────────────────── */
+
+    /* Top-left: wallet connection status + last tx state */
+    #status {
+      position: fixed; top: 16px; left: 16px;
+      background: rgba(0,0,0,0.6); padding: 8px 12px; border-radius: 6px;
+      font-size: 13px; max-width: 400px; line-height: 1.5;
+    }
+
+    /* Bottom-center: Trade / Help / Betray buttons, shown only when near NPC */
+    #interaction-panel {
+      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+      display: none; /* hidden by default; main.js shows it when in range */
+      gap: 12px;
+      background: rgba(0,0,0,0.7); padding: 16px 24px; border-radius: 10px;
+      flex-direction: column; align-items: center;
+    }
+    #interaction-panel p {
+      font-size: 13px; color: #aaa; margin-bottom: 4px;
+    }
+    #interaction-panel .btn-row { display: flex; gap: 12px; }
+    #interaction-panel button {
+      padding: 10px 20px; border: none; border-radius: 6px;
+      font-size: 14px; font-weight: bold; cursor: pointer; transition: opacity .15s;
+    }
+    #interaction-panel button:disabled { opacity: .45; cursor: not-allowed; }
+    #btn-trade  { background: #4a9eff; color: #fff; }
+    #btn-help   { background: #4caf50; color: #fff; }
+    #btn-betray { background: #e53935; color: #fff; }
+
+    /* Floating label above the NPC (positioned by main.js each frame) */
+    #npc-label {
+      position: fixed;
+      display: none; /* main.js shows it once the scene is ready */
+      text-align: center; pointer-events: none;
+      transform: translate(-50%, -100%);
+    }
+    #npc-name    { font-size: 13px; color: #ccc; }
+    #npc-standing {
+      font-size: 20px; font-weight: bold;
+      /* color is set by setNpcStanding() in scene.js */
+    }
+
+    /* No-wallet warning shown in place of the interaction panel */
+    #no-wallet {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(20,20,20,0.92); border: 1px solid #555;
+      padding: 24px 32px; border-radius: 10px; text-align: center;
+      display: none; max-width: 360px;
+    }
+    #no-wallet h2 { margin-bottom: 8px; font-size: 16px; }
+    #no-wallet p  { font-size: 13px; color: #aaa; line-height: 1.6; }
+  </style>
+</head>
+<body>
+
+  <!-- Three.js canvas goes here -->
+  <div id="canvas-container"></div>
+
+  <!-- HUD overlays -->
+  <div id="status">Connecting wallet…</div>
+
+  <!-- Floating NPC label (positioned via JS each frame) -->
+  <div id="npc-label">
+    <div id="npc-standing">0</div>
+    <div id="npc-name">Aiden</div>
+  </div>
+
+  <!-- Interaction panel (only visible when player is near NPC) -->
+  <div id="interaction-panel">
+    <p>You are near <strong>Aiden</strong> — choose an action:</p>
+    <div class="btn-row">
+      <button id="btn-trade">Trade (+2)</button>
+      <button id="btn-help">Help (+10)</button>
+      <button id="btn-betray">Betray (−15)</button>
+    </div>
+    <div id="tx-status" style="font-size:12px;color:#ffcc00;min-height:18px;"></div>
+  </div>
+
+  <!-- Shown when window.ethereum is absent -->
+  <div id="no-wallet">
+    <h2>No Wallet Detected</h2>
+    <p>
+      Install <strong>MetaMask</strong> and add the
+      <strong>Somnia Shannon Testnet</strong> (Chain ID 50312).<br><br>
+      The 3D scene will still run — you just can't send transactions.
+    </p>
+  </div>
+
+  <!-- Entry point; Vite handles bundling -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
