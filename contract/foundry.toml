@@ -11,4 +11,4 @@ solc_version = "0.8.28"
 
 # EVM version — paris is safe and widely supported; change to "cancun" if you
 # need transient storage or other post-merge opcodes.
-evm_version = "paris"
+evm_version = "london"
