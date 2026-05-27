@@ -1,5 +1,3 @@
-claude_code_spec.md
-
 # Foundry build artifacts and dependencies
 contract/out/
 contract/cache/
