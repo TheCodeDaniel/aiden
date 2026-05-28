@@ -25,10 +25,10 @@ import {
   defineChain,
   keccak256,
   toBytes,
-  privateKeyToAccount,
   encodeAbiParameters,
   parseAbiParameters,
 } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 
 const PRIVATE_KEY     = process.env.PRIVATE_KEY     as `0x${string}`;
 const AGENT_ADDRESS   = process.env.AGENT_ADDRESS   as `0x${string}`;
