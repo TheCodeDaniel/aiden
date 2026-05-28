@@ -63,6 +63,12 @@ let npcMaterial;
 let _isPlayerInRange = false;
 let lastFrameTime    = performance.now();
 
+// ─── Betrayal effect state ────────────────────────────────────────────────────
+let betrayalEffect = null; // null when idle; {startTime, duration} when active
+let _lastBetrayalTrigger = 0; // debounce double-triggers
+let _npcBaseColor = COLOR_NEUTRAL; // standing-derived color; restored after flash ends
+const _lungeDir = new THREE.Vector3(); // reused each frame to avoid GC
+
 // ─── Input ────────────────────────────────────────────────────────────────────
 
 const keys = {
@@ -492,6 +498,46 @@ function animate() {
   camTarget.z += (playerGroup.position.z - camTarget.z) * k;
 
   syncCamera();
+
+  // ── Betrayal effect ───────────────────────────────────────────────────────
+  if (betrayalEffect) {
+    const elapsedMs = now - betrayalEffect.startTime;
+    const t = elapsedMs / betrayalEffect.duration; // 0 → 1
+
+    if (t >= 1) {
+      // Effect over — restore NPC to standing-based colour and reset position
+      betrayalEffect = null;
+      npcMaterial.color.setHex(_npcBaseColor);
+      npcGroup.position.x = NPC_WORLD_POS.x;
+      npcGroup.position.z = NPC_WORLD_POS.z;
+    } else {
+      // Screen shake — strongest at start, exponential decay
+      const shakeAmt = 0.38 * Math.exp(-4.5 * t);
+      camera.position.x += (Math.random() * 2 - 1) * shakeAmt;
+      camera.position.y += (Math.random() * 2 - 1) * shakeAmt * 0.4;
+      camera.position.z += (Math.random() * 2 - 1) * shakeAmt;
+
+      // NPC flash: strobe ~18 Hz between angry red and near-white for 800 ms
+      if (elapsedMs < 800) {
+        npcMaterial.color.setHex(Math.floor(elapsedMs / 55) % 2 === 0 ? 0xff2020 : 0xfff0f0);
+      } else {
+        npcMaterial.color.setHex(_npcBaseColor);
+      }
+
+      // Lunge toward player — advance 1.5 units over 250 ms, snap back 250–500 ms
+      _lungeDir.set(
+        playerGroup.position.x - NPC_WORLD_POS.x,
+        0,
+        playerGroup.position.z - NPC_WORLD_POS.z,
+      ).normalize();
+      let lunge = 0;
+      if      (elapsedMs < 250) lunge = (elapsedMs / 250) * 1.5;
+      else if (elapsedMs < 500) lunge = (1 - (elapsedMs - 250) / 250) * 1.5;
+      npcGroup.position.x = NPC_WORLD_POS.x + _lungeDir.x * lunge;
+      npcGroup.position.z = NPC_WORLD_POS.z + _lungeDir.z * lunge;
+    }
+  }
+
   renderer.render(scene, camera);
 }
 
@@ -505,8 +551,9 @@ export function setNpcStanding(value) {
   else if (value <= -5) color = COLOR_NEGATIVE;
   else                  color = COLOR_NEUTRAL;
 
-  // One material update recolours every body part on the NPC
-  npcMaterial.color.setHex(color);
+  _npcBaseColor = color;
+  // Don't override the flash strobe — the animate loop restores colour when done
+  if (!betrayalEffect) npcMaterial.color.setHex(color);
 
   const el = document.getElementById('npc-standing');
   if (el) {
@@ -518,6 +565,33 @@ export function setNpcStanding(value) {
 // Returns true when the player is close enough to the NPC to interact.
 export function isPlayerInRange() {
   return _isPlayerInRange;
+}
+
+// Kicks off the betrayal visual burst: screen shake, NPC strobe, lunge, red vignette,
+// and a floating "⚔ −10" damage number. Debounced to 2 s so double-fires are ignored.
+export function triggerBetrayalEffect() {
+  const now = performance.now();
+  if (now - _lastBetrayalTrigger < 2000) return;
+  _lastBetrayalTrigger = now;
+  betrayalEffect = { startTime: now, duration: 1200 };
+
+  // Full-screen red vignette flash
+  const flash = document.getElementById('betrayal-flash');
+  if (flash) {
+    flash.style.animation = 'none';
+    void flash.offsetWidth; // force reflow so animation restarts cleanly
+    flash.style.animation = 'betrayal-flash 0.9s ease-out forwards';
+  }
+
+  // Floating "⚔ −10" damage number spawned above the NPC
+  const pos = getNpcScreenPos();
+  const el = document.createElement('div');
+  el.className = 'damage-float';
+  el.textContent = '⚔ −10';
+  el.style.left = pos.x + 'px';
+  el.style.top  = (pos.y - 50) + 'px';
+  document.body.appendChild(el);
+  el.addEventListener('animationend', () => el.remove());
 }
 
 // Projects the NPC's head position to 2D screen space.

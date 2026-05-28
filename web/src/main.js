@@ -30,6 +30,7 @@ import {
   setNpcStanding,
   isPlayerInRange,
   getNpcScreenPos,
+  triggerBetrayalEffect,
 } from './scene.js';
 
 // The only NPC in this demo is id=0 ("Aiden"), registered by the deploy script.
@@ -98,6 +99,7 @@ const btnBetray     = document.getElementById('btn-betray');
     // precompile through AidenReactiveHandler with no human involvement.
     watchNpcReacted(NPC_ID, (newStanding) => {
       applyStanding(newStanding);
+      triggerBetrayalEffect();
       txStatusEl.textContent = '⚡ Aiden retaliates autonomously!';
       setTimeout(() => { txStatusEl.textContent = ''; }, 4000);
     });
@@ -164,6 +166,7 @@ async function handleAction(action) {
     if (action === ACTION.Betray && newStanding < -10) {
       txStatusEl.textContent = '⚡ Aiden is retaliating…';
       await simulatePrecompile(NPC_ID, action, newStanding);
+      triggerBetrayalEffect();
       const reactedStanding = await getStanding(NPC_ID);
       applyStanding(reactedStanding);
     }

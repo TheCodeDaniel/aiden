@@ -67,6 +67,34 @@
     }
     #no-wallet h2 { margin-bottom: 8px; font-size: 16px; }
     #no-wallet p  { font-size: 13px; color: #aaa; line-height: 1.6; }
+
+    /* ── Betrayal effects ─────────────────────────────────────────────────── */
+
+    /* Full-screen red vignette that flares on betrayal retaliation */
+    #betrayal-flash {
+      position: fixed; inset: 0; pointer-events: none; z-index: 50;
+      background: radial-gradient(ellipse at center, transparent 20%, rgba(210,20,20,0.80) 100%);
+      opacity: 0;
+    }
+    @keyframes betrayal-flash {
+      0%   { opacity: 1; }
+      15%  { opacity: 0.85; }
+      100% { opacity: 0; }
+    }
+
+    /* Floating damage number that rises above the NPC and fades out */
+    .damage-float {
+      position: fixed; pointer-events: none; z-index: 60;
+      font-size: 30px; font-weight: bold; font-family: monospace;
+      color: #ff3333;
+      text-shadow: 0 0 14px rgba(255,50,50,0.95), 2px 2px 0 #000;
+      transform: translateX(-50%);
+      animation: damage-rise 1.6s ease-out forwards;
+    }
+    @keyframes damage-rise {
+      0%   { opacity: 1; transform: translateX(-50%) translateY(0px);   }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-90px); }
+    }
   </style>
 </head>
 <body>
@@ -93,6 +121,9 @@
     </div>
     <div id="tx-status" style="font-size:12px;color:#ffcc00;min-height:18px;"></div>
   </div>
+
+  <!-- Red vignette flash on betrayal retaliation (controlled by scene.js) -->
+  <div id="betrayal-flash"></div>
 
   <!-- Shown when window.ethereum is absent -->
   <div id="no-wallet">
