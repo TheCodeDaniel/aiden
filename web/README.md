@@ -16,12 +16,12 @@ A 3D interactive demo that proves the AidenAgent smart contract works — visual
 
 ### Getting STT tokens
 
-`faucet.somnia.network` is no longer active. Use one of these:
+`faucet.somnia.network` is no longer active. Uswe one of these:
 
 | Faucet | Notes |
 |---|---|
 | https://testnet.somnia.network | Official hub, 0.5 STT / 24h |
-| https://cloud.google.com/application/web3/faucet/somnia/shannon | Google login — most reliable |
+| https://cloud.google.com/application/web3/faucet/somnia/shannon | Google login — most reliable |s
 | https://faucet.trade/somnia-shannon-stt-faucet | Requires a tweet |
 
 A small amount of STT (< 1) is enough to play the game. The 32 STT minimum is only needed to register a live Somnia Reactivity subscription — the demo works without it.
