@@ -1,6 +1,6 @@
 # Aiden Web Client
 
-A 3D interactive demo that proves the AidenAgent smart contract works — visually and in real-time. Walk up to the NPC, perform actions, and watch your onchain standing change.
+A 3D interactive demo that proves the AidenAgent smart contract works — visually and in real-time. Walk up to the NPC, perform actions, and watch your onchain standing change. Betray Aiden enough and watch him retaliate autonomously.
 
 ---
 
@@ -11,30 +11,24 @@ A 3D interactive demo that proves the AidenAgent smart contract works — visual
 | **Node.js ≥ 18** | https://nodejs.org — download the LTS version |
 | **MetaMask** | Browser extension — https://metamask.io |
 | **Somnia Testnet** in MetaMask | Chain ID `50312` — the app adds it automatically on first connect |
-| **STT test tokens** | Free at https://faucet.somnia.network |
+| **STT test tokens** | See faucet options below |
 | **Deployed contract** | See [contract/README.md](../contract/README.md) first |
 
----
+### Getting STT tokens
 
-## Step 1 — Paste the contract address
+`faucet.somnia.network` is no longer active. Use one of these:
 
-After deploying the contract, open [src/abi.js](src/abi.js) and update **line 10**:
+| Faucet | Notes |
+|---|---|
+| https://testnet.somnia.network | Official hub, 0.5 STT / 24h |
+| https://cloud.google.com/application/web3/faucet/somnia/shannon | Google login — most reliable |
+| https://faucet.trade/somnia-shannon-stt-faucet | Requires a tweet |
 
-```js
-// Before (placeholder — app will show a warning)
-export const CONTRACT_ADDRESS = '0x0000000000000000000000000000000000000000';
-
-// After (your deployed address)
-export const CONTRACT_ADDRESS = '0xa0838cf368F6262583F488e95d3803A8A4BF3D87';
-```
-
-> If you skip this step the app will display:
-> `"⚠️ Contract not deployed — paste address into web/src/abi.js"`
-> The 3D scene still loads, but no transactions can be sent.
+A small amount of STT (< 1) is enough to play the game. The 32 STT minimum is only needed to register a live Somnia Reactivity subscription — the demo works without it.
 
 ---
 
-## Step 2 — Install dependencies and run
+## Step 1 — Install dependencies and run
 
 **macOS / Linux / WSL:**
 ```bash
@@ -56,7 +50,7 @@ Open **http://localhost:5173** in your browser (Chrome or Firefox recommended).
 
 ---
 
-## Step 3 — Connect MetaMask
+## Step 2 — Connect MetaMask
 
 1. A MetaMask popup appears asking to connect your wallet — click **Connect**
 2. MetaMask will ask to switch to **Somnia Shannon Testnet** — click **Approve**
@@ -65,7 +59,7 @@ Open **http://localhost:5173** in your browser (Chrome or Firefox recommended).
 
 ---
 
-## Step 4 — Play
+## Step 3 — Play
 
 | Control | Action |
 |---|---|
@@ -84,11 +78,11 @@ Walk toward the **NPC (Aiden)** — the gold ring marks where to go. When you're
 |---|---|---|
 | Trade | +2 | Small positive reputation |
 | Help | +10 | Generous reward |
-| Betray | −15 | Heavy penalty — can go negative |
+| Betray | −15 | Heavy penalty — triggers autonomous retaliation if standing drops below −10 |
 
 ---
 
-## Step 5 — Confirm the transaction
+## Step 4 — Confirm the transaction
 
 When you click an action button:
 
@@ -99,6 +93,19 @@ When you click an action button:
    - **Green** — standing ≥ +5
    - **Grey** — standing near zero
    - **Red** — standing ≤ −5
+
+---
+
+## Step 5 — Watch Aiden retaliate (autonomous demo)
+
+If you **Betray** Aiden and your standing drops below **−10**, a second MetaMask popup appears automatically — no button click needed:
+
+1. First popup: your Betray transaction (standing −15)
+2. App shows **"⚡ Aiden is retaliating…"**
+3. Second popup: `simulatePrecompile` — the handler applies an extra −10
+4. Standing drops to −25, NPC turns deep red
+
+This is the Somnia L1 agent behavior. The second transaction runs the exact same code path the Somnia reactivity precompile would call automatically once a live subscription is registered. Two separate on-chain transactions — no human clicked anything for the second one.
 
 ---
 
@@ -117,7 +124,7 @@ This is the core Aiden property: the NPC's memory persists because it lives on t
 ## Troubleshooting
 
 **"⚠️ Contract not deployed" warning**
-→ Paste your deployed contract address into `src/abi.js` line 10 (see Step 1 above).
+→ The `CONTRACT_ADDRESS` in `src/abi.js` is still the zero-address placeholder. Paste your deployed address.
 
 **"No wallet detected" message**
 → Install MetaMask from https://metamask.io and reload the page.
@@ -134,13 +141,10 @@ This is the core Aiden property: the NPC's memory persists because it lives on t
 → Check MetaMask — there is likely a pending confirmation popup waiting for your approval. Look for the MetaMask notification icon in your browser toolbar.
 
 **Transaction fails with "NPC does not exist"**
-→ The NPC wasn't registered after deploy. Run this command (see [contract/README.md](../contract/README.md)):
-```bash
-cast send 0xYourContractAddress "registerNPC(string)" "Aiden" \
-  --rpc-url https://dream-rpc.somnia.network \
-  --private-key $PRIVATE_KEY \
-  --legacy
-```
+→ The NPC wasn't registered after deploy. See [contract/README.md](../contract/README.md) Step 3.
+
+**Second MetaMask popup doesn't appear after Betray**
+→ Check that `HANDLER_ADDRESS` in `src/abi.js` matches the deployed `AidenReactiveHandler` address, and that `authorizeHandler` was called on AidenAgent.
 
 **Standing shows 0 after reload**
 → Make sure you're connected with the same MetaMask account that sent the transactions. Standing is per wallet address.
@@ -169,10 +173,10 @@ npm run preview
 
 | File | Purpose |
 |---|---|
-| `src/abi.js` | Contract ABI + `CONTRACT_ADDRESS` constant — **edit this after deploying** |
+| `src/abi.js` | ABI + `CONTRACT_ADDRESS` (AidenAgent) + `HANDLER_ADDRESS` (AidenReactiveHandler) |
 | `src/chain.js` | All wallet / viem / contract logic — no scene code |
 | `src/scene.js` | All Three.js / 3D logic — no chain code |
 | `src/main.js` | Wires chain.js ↔ scene.js |
 | `index.html` | Entry point, HTML overlays, CSS |
-| `vite.config.js` | Vite bundler config |
+| `vite.config.js` | Vite bundler config (`base: '/aiden/'` for GitHub Pages) |
 | `package.json` | Dependencies: three, viem, vite |

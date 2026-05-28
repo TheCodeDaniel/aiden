@@ -51,36 +51,44 @@ forge --version
 # 1. Enter the contract directory
 cd contract
 
-# 2. Install forge-std (the test/script library) — needed after a fresh clone
+# 2. Install npm dependencies (Somnia Reactivity contracts)
+npm install
+
+# 3. Install forge-std (the test/script library) — needed after a fresh clone
 forge install foundry-rs/forge-std
 
-# 3. Build
+# 4. Build
 forge build
 # Expected: "Compiler run successful!"
 
-# 4. Run tests
+# 5. Run tests
 forge test
-# Expected: 9 tests passed, 0 failed
+# Expected: 15 tests passed, 0 failed (9 AidenAgent + 6 AidenReactiveHandler)
 ```
 
 ---
 
-## Deploy to Somnia Testnet
+## Get STT test tokens
 
-### Step 1 — Get a wallet and STT tokens
+`faucet.somnia.network` is no longer active. Use one of these instead:
 
-1. Install [MetaMask](https://metamask.io) in your browser
-2. Create a **new dedicated wallet** for deploying (don't use your main wallet)
-3. Copy your wallet address
-4. Visit https://faucet.somnia.network and request STT tokens to that address
+| Faucet | Amount | Notes |
+|---|---|---|
+| https://testnet.somnia.network | 0.5 STT / 24h | Official hub |
+| https://cloud.google.com/application/web3/faucet/somnia/shannon | Varies | Google login required — most reliable |
+| https://faucet.trade/somnia-shannon-stt-faucet | 0.1 STT / 24h | Requires a tweet |
 
-### Step 2 — Export your private key
+---
 
-In MetaMask: click the three dots next to your account → **Account Details** → **Show private key** → enter your password → copy the key.
+## Deploy AidenAgent
+
+### Step 1 — Export your private key
+
+In MetaMask: three dots → **Account Details** → **Show private key** → enter password → copy.
 
 > ⚠️ Never share your private key. Never commit it to git. Use a throwaway wallet for testnet deploys.
 
-### Step 3 — Set the environment variable
+**Important:** set the variable in the same terminal session you will run forge from. If you open a new tab or window, you must set it again — it does not persist.
 
 **macOS / Linux / WSL:**
 ```bash
@@ -97,19 +105,16 @@ set PRIVATE_KEY=0xYourPrivateKeyHere
 $env:PRIVATE_KEY = "0xYourPrivateKeyHere"
 ```
 
-> This only lasts for the current terminal session. It is never saved to any file.
-
-### Step 4 — Deploy
+### Step 2 — Deploy AidenAgent
 
 ```bash
 forge create src/AidenAgent.sol:AidenAgent \
   --rpc-url https://dream-rpc.somnia.network \
   --private-key $PRIVATE_KEY \
-  --legacy \
-  --broadcast
+  --legacy --broadcast
 ```
 
-**Windows (Command Prompt — no line continuation):**
+**Windows (Command Prompt):**
 ```cmd
 forge create src/AidenAgent.sol:AidenAgent --rpc-url https://dream-rpc.somnia.network --private-key %PRIVATE_KEY% --legacy --broadcast
 ```
@@ -117,116 +122,75 @@ forge create src/AidenAgent.sol:AidenAgent --rpc-url https://dream-rpc.somnia.ne
 Output:
 ```
 Deployer:    0xYourWalletAddress
-Deployed to: 0xYourContractAddress   ← copy this
-Transaction hash: 0x...
+Deployed to: 0xYourAgentAddress   ← copy this
 ```
 
-### Step 5 — Register NPC id=0
+### Step 3 — Register NPC id=0
 
 ```bash
-cast send 0xYourContractAddress \
-  "registerNPC(string)" "Aiden" \
+cast send 0xYourAgentAddress "registerNPC(string)" "Aiden" \
   --rpc-url https://dream-rpc.somnia.network \
-  --private-key $PRIVATE_KEY \
-  --legacy
-```
-
-**Windows (Command Prompt):**
-```cmd
-cast send 0xYourContractAddress "registerNPC(string)" "Aiden" --rpc-url https://dream-rpc.somnia.network --private-key %PRIVATE_KEY% --legacy
+  --private-key $PRIVATE_KEY --legacy
 ```
 
 Output should show `status: 1 (success)`.
 
-### Step 6 — Paste the address into the web client
+### Step 4 — Paste the address into the web client
 
-Open `web/src/abi.js` and update line 10:
-```js
-export const CONTRACT_ADDRESS = '0xYourContractAddress';
-```
+Open `web/src/abi.js` and update the `CONTRACT_ADDRESS` constant.
 
 ---
 
-## Verify deployment
+## Deploy AidenReactiveHandler (Somnia L1 Agent)
 
-Check the contract exists on-chain:
+`AidenReactiveHandler` is a Somnia L1 agent — it inherits from `SomniaEventHandler` and is called autonomously by the Somnia reactivity precompile.
+
+> **Gas note:** Contracts that inherit from `SomniaEventHandler` require ~10–15M gas to deploy on Somnia, significantly more than standard EVM gas estimates. `forge create` and `forge script` underestimate the gas and will fail. Use `cast send --create` with an explicit `--gas-limit` as shown below.
+
+### Step 1 — Build to get the bytecode
+
 ```bash
-cast code 0xYourContractAddress --rpc-url https://dream-rpc.somnia.network
-# Should return a long hex string (bytecode), NOT just "0x"
+forge build
 ```
 
-Check the NPC was registered:
+### Step 2 — Deploy via cast send
+
 ```bash
-cast call 0xYourContractAddress "getNPC(uint256)(uint256,string,bool)" 0 \
-  --rpc-url https://dream-rpc.somnia.network
-# Expected: 0  "Aiden"  true
+export AGENT_ADDRESS=0xYourAgentAddress
+
+CREATION=$(cat out/AidenReactiveHandler.sol/AidenReactiveHandler.json | \
+  python3 -c "import sys,json; d=json.load(sys.stdin); print(d['bytecode']['object'])")
+
+ARGS=$(cast abi-encode "constructor(address)" $AGENT_ADDRESS | cut -c3-)
+
+cast send \
+  --rpc-url https://dream-rpc.somnia.network \
+  --private-key $PRIVATE_KEY \
+  --legacy --gas-limit 15000000 \
+  --create ${CREATION}${ARGS}
 ```
 
----
+Output includes `contractAddress` — copy it.
 
-## Contract API
+### Step 3 — Authorise the handler on AidenAgent
 
-### Functions
-
-#### `registerNPC(string name) → uint256`
-Registers a new NPC. Returns its id (starts at 0).
 ```bash
-cast send <address> "registerNPC(string)" "MyNPC" --rpc-url ... --private-key $PRIVATE_KEY --legacy
+cast send $AGENT_ADDRESS "authorizeHandler(address)" $HANDLER_ADDRESS \
+  --rpc-url https://dream-rpc.somnia.network \
+  --private-key $PRIVATE_KEY --legacy
 ```
 
-#### `interact(uint256 npcId, uint8 action)`
-Records a player action. `action`: `0`=Trade, `1`=Help, `2`=Betray.
-Reverts with `"NPC does not exist"` for an unregistered id.
-```bash
-cast send <address> "interact(uint256,uint8)" 0 1 --rpc-url ... --private-key $PRIVATE_KEY --legacy
-```
+Output should show `status: 1 (success)`.
 
-#### `getStanding(uint256 npcId, address player) → int256`
-Returns the player's current standing with the NPC. Free (read-only).
-```bash
-cast call <address> "getStanding(uint256,address)(int256)" 0 <playerAddress> --rpc-url ...
-```
+### Step 4 — Update the web client
 
-#### `getNPC(uint256 npcId) → (uint256 id, string name, bool exists)`
-Returns NPC metadata. Free (read-only).
-```bash
-cast call <address> "getNPC(uint256)(uint256,string,bool)" 0 --rpc-url ...
-```
-
-### Standing deltas
-
-| Action | Value |
-|---|---|
-| Help | +10 |
-| Trade | +2 |
-| Betray | −15 |
-
-Standing is `int256` — it can go negative after betrayals.
-
-### Events
-
-**`NPCRegistered(uint256 indexed npcId, string name)`**
-Emitted when `registerNPC` succeeds.
-
-**`Interacted(uint256 indexed npcId, address indexed player, uint8 action, int256 newStanding)`**
-Emitted on every `interact` call. Subscribe to this for real-time standing updates.
-
-**`NpcReacted(uint256 indexed npcId, address indexed player, string reaction, int256 newStanding)`**
-Emitted by `applyReactivePenalty`. Fired autonomously by the Somnia reactivity precompile — no human triggers it.
-
-### Reactive extension points
-
-#### `authorizeHandler(address handler)`
-Authorises `AidenReactiveHandler` to call `applyReactivePenalty`. Only the deployer (owner) can call this.
-
-#### `applyReactivePenalty(uint256 npcId, address player, int256 delta)`
-Called by the authorised handler to apply an autonomous standing change. Reverts if the caller is not the authorised handler.
+Open `web/src/abi.js` and update `HANDLER_ADDRESS` to the deployed handler address.
 
 ---
 
 ## Somnia Reactivity — autonomous retaliation
 
-When a player betrays Aiden and their standing drops below −10, the Somnia blockchain automatically calls `AidenReactiveHandler._onEvent` — an additional −10 penalty is applied with no human triggering it. The full chain of events:
+When a player betrays Aiden and their standing drops below −10, the Somnia blockchain automatically calls `AidenReactiveHandler._onEvent` — an additional −10 penalty is applied with no human triggering it.
 
 ```
 Player clicks "Betray"
@@ -237,35 +201,103 @@ Somnia reactivity precompile detects Interacted matches the subscription filter
        ↓
 Precompile calls AidenReactiveHandler.onEvent() — autonomously, on-chain
        ↓
-Handler decodes event: action=Betray, newStanding=−15 < −10 threshold
+Handler: action=Betray, newStanding=−15 < −10 threshold → retaliate
        ↓
-Handler calls AidenAgent.applyReactivePenalty(npcId, player, −10)
+AidenAgent.applyReactivePenalty() → standing −10 more → emits NpcReacted(−25)
        ↓
-AidenAgent.standing −10 more → emits NpcReacted(npcId, player, "Aiden retaliates", −25)
-       ↓
-Web client receives NpcReacted event, updates standing display autonomously
+Web client receives NpcReacted, shows "⚡ Aiden retaliates autonomously!"
 ```
 
-### Deploy the reactive handler
+### Register the live subscription (requires ≥ 32 STT)
+
+The precompile requires the registering wallet to hold at least 32 STT as anti-spam collateral (the STT stays in your wallet).
 
 ```bash
-# 1. Deploy AidenReactiveHandler
-forge create src/AidenReactiveHandler.sol:AidenReactiveHandler \
-  --constructor-args $AGENT_ADDRESS \
-  --rpc-url https://dream-rpc.somnia.network \
-  --private-key $PRIVATE_KEY \
-  --legacy --broadcast
-
-# 2. Authorise the handler on AidenAgent
-cast send $AGENT_ADDRESS "authorizeHandler(address)" $HANDLER_ADDRESS \
-  --rpc-url https://dream-rpc.somnia.network \
-  --private-key $PRIVATE_KEY --legacy
-
-# 3. Register the Somnia Reactivity subscription (wallet needs >= 32 STT)
-export AGENT_ADDRESS=0x...
-export HANDLER_ADDRESS=0x...
+export AGENT_ADDRESS=0xYourAgentAddress
+export HANDLER_ADDRESS=0xYourHandlerAddress
 npx tsx script/RegisterReactivity.ts
 ```
+
+### Demo without 32 STT — simulatePrecompile
+
+`AidenReactiveHandler` includes a `simulatePrecompile()` function that runs the exact same logic as `_onEvent` without needing the precompile subscription. The web client calls this automatically after every qualifying Betray — you see two MetaMask popups:
+
+1. The Betray transaction
+2. Aiden's automatic retaliation (same on-chain code path)
+
+This demonstrates the full autonomous chain with no STT requirement beyond normal gas.
+
+---
+
+## Verify deployment
+
+```bash
+# Check AidenAgent exists
+cast code 0xYourAgentAddress --rpc-url https://dream-rpc.somnia.network
+# Should return bytecode, NOT just "0x"
+
+# Check NPC is registered
+cast call 0xYourAgentAddress "getNPC(uint256)(uint256,string,bool)" 0 \
+  --rpc-url https://dream-rpc.somnia.network
+# Expected: 0  "Aiden"  true
+
+# Check handler is authorised
+cast call 0xYourAgentAddress "reactiveHandler()(address)" \
+  --rpc-url https://dream-rpc.somnia.network
+# Should return your handler address, not the zero address
+```
+
+---
+
+## Contract API
+
+### AidenAgent functions
+
+#### `registerNPC(string name) → uint256`
+Registers a new NPC. Returns its id (starts at 0).
+
+#### `interact(uint256 npcId, uint8 action)`
+Records a player action. `action`: `0`=Trade, `1`=Help, `2`=Betray.
+Reverts with `"NPC does not exist"` for an unregistered id.
+
+#### `getStanding(uint256 npcId, address player) → int256`
+Returns the player's current standing with the NPC. Free (read-only).
+
+#### `getNPC(uint256 npcId) → (uint256 id, string name, bool exists)`
+Returns NPC metadata. Free (read-only).
+
+#### `authorizeHandler(address handler)`
+Authorises `AidenReactiveHandler` to call `applyReactivePenalty`. Owner only.
+
+#### `applyReactivePenalty(uint256 npcId, address player, int256 delta)`
+Called by the authorised handler to apply an autonomous standing penalty.
+
+### AidenReactiveHandler functions
+
+#### `simulatePrecompile(uint256 npcId, address player, uint8 action, int256 newStanding)`
+Demo function — runs the same retaliation logic as the live precompile subscription without needing 32 STT. Called automatically by the web client.
+
+### Standing deltas
+
+| Action | Value |
+|---|---|
+| Help | +10 |
+| Trade | +2 |
+| Betray | −15 |
+| Reactive penalty | −10 (autonomous, triggered when standing < −10 after Betray) |
+
+Standing is `int256` — it can go negative.
+
+### Events
+
+**`NPCRegistered(uint256 indexed npcId, string name)`**
+Emitted when `registerNPC` succeeds.
+
+**`Interacted(uint256 indexed npcId, address indexed player, uint8 action, int256 newStanding)`**
+Emitted on every `interact` call.
+
+**`NpcReacted(uint256 indexed npcId, address indexed player, string reaction, int256 newStanding)`**
+Emitted by `applyReactivePenalty` — fired autonomously, no human triggers it.
 
 ---
 
@@ -273,11 +305,22 @@ npx tsx script/RegisterReactivity.ts
 
 ```bash
 forge test
-# Runs all 15 unit tests (9 AidenAgent + 6 AidenReactiveHandler)
+# 15 tests: 9 AidenAgent + 6 AidenReactiveHandler
 forge test -v
-# Verbose: shows each test name and gas cost
+# Verbose: each test name and gas cost
 forge test --match-test testBetrayBelowThresholdAppliesPenalty
-# Run a single test by name
+# Single test by name
 ```
 
 All 15 tests must pass before deploying.
+
+---
+
+## Known Somnia quirks
+
+| Issue | Cause | Fix |
+|---|---|---|
+| `forge create` hits `localhost:8545` | `$PRIVATE_KEY` not set — empty string makes forge try a local unlocked account | Always `export PRIVATE_KEY=0x...` in the same terminal session before running forge |
+| `forge create` / `forge script` fails for `AidenReactiveHandler` | Gas underestimated — Somnia charges ~10–15M gas for contracts inheriting `SomniaEventHandler` | Use `cast send --create --gas-limit 15000000` (see deploy steps above) |
+| `npx tsx script/RegisterReactivity.ts` reverts | Wallet balance < 32 STT — precompile enforces this | Use `simulatePrecompile` demo mode instead, or accumulate 32 STT from faucets |
+| `@somnia-chain/reactivity` SDK crashes | Package published to npm without its `dist/` folder | Script calls the precompile directly via viem — no SDK needed |
