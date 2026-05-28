@@ -72,9 +72,7 @@ async function main() {
   console.log('  Balance: ', (Number(balance) / 1e18).toFixed(4), 'STT');
 
   if (balance < 32n * 10n ** 18n) {
-    console.error('\nERROR: Wallet needs >= 32 STT to register a subscription.');
-    console.error('Get STT from https://faucet.somnia.network then re-run.');
-    process.exit(1);
+    console.warn('\nWARNING: Balance is below 32 STT — trying anyway (precompile may allow it).');
   }
 
   // Encode SubscriptionData struct
