@@ -5,10 +5,12 @@ The smart contract that gives NPCs persistent onchain memory.
 > Any EVM-capable engine — Unity, Unreal, web, Flutter — calls these same functions.
 > This is Aiden's engine-agnostic API. The contract is the product; clients are interchangeable.
 
-**Deployed address (Somnia Shannon Testnet):**
-```
-0xa0838cf368F6262583F488e95d3803A8A4BF3D87
-```
+**Deployed addresses (Somnia Shannon Testnet):**
+| Contract | Address |
+|---|---|
+| AidenAgent | `0xDe2123635705Bbd06496d8007F1c13cCE2DCcF5b` |
+| AidenReactiveHandler | `0x8D9b4aAD7324914b4418B264d94574296A6F839B` |
+
 View on explorer: https://shannon-explorer.somnia.network
 
 ---

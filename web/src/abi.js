@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Deployed to Somnia Shannon Testnet (Chain ID 50312)
-export const CONTRACT_ADDRESS = '0xa0838cf368F6262583F488e95d3803A8A4BF3D87';
+export const CONTRACT_ADDRESS = '0xDe2123635705Bbd06496d8007F1c13cCE2DCcF5b';
 
 // The ABI describes every public function and event in AidenAgent.sol.
 // viem uses this to know how to encode calls and decode return values.
