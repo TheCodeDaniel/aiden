@@ -9,7 +9,7 @@ The smart contract that gives NPCs persistent onchain memory.
 | Contract | Address |
 |---|---|
 | AidenAgent | `0xDe2123635705Bbd06496d8007F1c13cCE2DCcF5b` |
-| AidenReactiveHandler | `0x8D9b4aAD7324914b4418B264d94574296A6F839B` |
+| AidenReactiveHandler | `0x9ba8a3e76027EFDD64a50bdB0cC34E56817DBc05` |
 
 View on explorer: https://shannon-explorer.somnia.network
 

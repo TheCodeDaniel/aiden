@@ -18,7 +18,22 @@ import {
   http,
 } from 'viem';
 
-import { ABI, CONTRACT_ADDRESS } from './abi.js';
+import { ABI, CONTRACT_ADDRESS, HANDLER_ADDRESS } from './abi.js';
+
+const HANDLER_ABI = [
+  {
+    name: 'simulatePrecompile',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'npcId',       type: 'uint256' },
+      { name: 'player',      type: 'address' },
+      { name: 'action',      type: 'uint8'   },
+      { name: 'newStanding', type: 'int256'  },
+    ],
+    outputs: [],
+  },
+];
 
 // ── Somnia Shannon Testnet chain definition ───────────────────────────────────
 // viem's built-in chain list doesn't include Somnia, so we define it manually.
@@ -182,6 +197,23 @@ export function watchInteractions(npcId, callback) {
   });
 
   return unwatch; // let the caller stop watching when needed
+}
+
+// ── simulatePrecompile ────────────────────────────────────────────────────────
+// Demo function — calls AidenReactiveHandler.simulatePrecompile() which runs
+// the exact same logic the Somnia reactivity precompile would trigger.
+// Use this when the live 32 STT subscription isn't registered yet.
+export async function simulatePrecompile(npcId, action, newStanding) {
+  if (!walletClient || !connectedAddress) return;
+  const hash = await walletClient.writeContract({
+    address: HANDLER_ADDRESS,
+    abi: HANDLER_ABI,
+    functionName: 'simulatePrecompile',
+    args: [BigInt(npcId), connectedAddress, action, BigInt(newStanding)],
+    account: connectedAddress,
+    chain: somniaTestnet,
+  });
+  await publicClient.waitForTransactionReceipt({ hash });
 }
 
 // ── watchNpcReacted ───────────────────────────────────────────────────────────

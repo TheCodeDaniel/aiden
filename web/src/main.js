@@ -16,6 +16,7 @@ import {
   interact,
   watchInteractions,
   watchNpcReacted,
+  simulatePrecompile,
   isWalletAvailable,
 } from './chain.js';
 
@@ -157,6 +158,15 @@ async function handleAction(action) {
     // Read the updated standing immediately after the tx confirms
     const newStanding = await getStanding(NPC_ID);
     applyStanding(newStanding);
+
+    // If it was a Betray that pushed standing below -10, auto-trigger the
+    // reactive handler — same logic the precompile would call autonomously.
+    if (action === ACTION.Betray && newStanding < -10) {
+      txStatusEl.textContent = '⚡ Aiden is retaliating…';
+      await simulatePrecompile(NPC_ID, action, newStanding);
+      const reactedStanding = await getStanding(NPC_ID);
+      applyStanding(reactedStanding);
+    }
 
     // Clear status after 2 seconds
     setTimeout(() => { txStatusEl.textContent = ''; }, 2000);

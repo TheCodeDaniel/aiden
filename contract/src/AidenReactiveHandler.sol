@@ -24,7 +24,8 @@ contract AidenReactiveHandler is SomniaEventHandler {
         agent = AidenAgent(agentAddress);
     }
 
-    /// @notice Called exclusively by the Somnia reactivity precompile (0x0100).
+    /// @notice Called exclusively by the Somnia reactivity precompile (0x0100)
+    ///         once a live subscription is registered.
     function _onEvent(
         address emitter,
         bytes32[] calldata eventTopics,
@@ -42,6 +43,24 @@ contract AidenReactiveHandler is SomniaEventHandler {
         if (action != BETRAY) return;
         if (newStanding >= THRESHOLD) return;
 
+        agent.applyReactivePenalty(npcId, player, REACTIVE_PENALTY);
+    }
+
+    /// @notice Demo function — mirrors exactly what the precompile would call.
+    ///         Anyone can call this to demonstrate the autonomous retaliation
+    ///         chain without needing the 32 STT subscription.
+    ///         Pass the npcId, player address, action (2=Betray), and the
+    ///         newStanding that was emitted by the Interacted event.
+    /// @notice Demo function — runs the exact same logic as _onEvent would when
+    ///         triggered by the precompile, without needing the 32 STT subscription.
+    function simulatePrecompile(
+        uint256 npcId,
+        address player,
+        uint8   action,
+        int256  newStanding
+    ) external {
+        if (action != BETRAY) return;
+        if (newStanding >= THRESHOLD) return;
         agent.applyReactivePenalty(npcId, player, REACTIVE_PENALTY);
     }
 

@@ -9,6 +9,9 @@
 // Deployed to Somnia Shannon Testnet (Chain ID 50312)
 export const CONTRACT_ADDRESS = '0xDe2123635705Bbd06496d8007F1c13cCE2DCcF5b';
 
+// AidenReactiveHandler — for simulatePrecompile demo calls
+export const HANDLER_ADDRESS  = '0x9ba8a3e76027EFDD64a50bdB0cC34E56817DBc05';
+
 // The ABI describes every public function and event in AidenAgent.sol.
 // viem uses this to know how to encode calls and decode return values.
 export const ABI = [
