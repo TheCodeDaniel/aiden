@@ -183,3 +183,29 @@ export function watchInteractions(npcId, callback) {
 
   return unwatch; // let the caller stop watching when needed
 }
+
+// ── watchNpcReacted ───────────────────────────────────────────────────────────
+// Subscribes to the NpcReacted event — fired autonomously by the Somnia
+// reactivity precompile through AidenReactiveHandler, with no human trigger.
+// Calls callback(newStanding) whenever the NPC retaliates against this player.
+export function watchNpcReacted(npcId, callback) {
+  if (!connectedAddress) return () => {};
+
+  const unwatch = publicClient.watchContractEvent({
+    address: CONTRACT_ADDRESS,
+    abi: ABI,
+    eventName: 'NpcReacted',
+    args: {
+      npcId:  BigInt(npcId),
+      player: connectedAddress,
+    },
+    onLogs: (logs) => {
+      const latest = logs[logs.length - 1];
+      if (latest?.args?.newStanding !== undefined) {
+        callback(Number(latest.args.newStanding));
+      }
+    },
+  });
+
+  return unwatch;
+}

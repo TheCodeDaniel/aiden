@@ -1,14 +1,14 @@
 [profile.default]
-# Source files live in src/, tests in test/, scripts in script/
 src     = "src"
 test    = "test"
 script  = "script"
 out     = "out"
 libs    = ["lib"]
 
-# Pin the exact Solidity version to match the pragma in AidenAgent.sol
-solc_version = "0.8.28"
+solc_version = "0.8.30"
+evm_version  = "cancun"
 
-# EVM version — paris is safe and widely supported; change to "cancun" if you
-# need transient storage or other post-merge opcodes.
-evm_version = "london"
+remappings = [
+    "@somnia-chain/reactivity-contracts/=node_modules/@somnia-chain/reactivity-contracts/",
+    "forge-std/=lib/forge-std/src/",
+]

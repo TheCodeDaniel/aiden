@@ -15,6 +15,7 @@ import {
   getStanding,
   interact,
   watchInteractions,
+  watchNpcReacted,
   isWalletAvailable,
 } from './chain.js';
 
@@ -90,6 +91,14 @@ const btnBetray     = document.getElementById('btn-betray');
     // Subscribe to live Interacted events — updates standing without reload
     watchInteractions(NPC_ID, (newStanding) => {
       applyStanding(newStanding);
+    });
+
+    // Subscribe to autonomous NpcReacted events — fired by the Somnia reactivity
+    // precompile through AidenReactiveHandler with no human involvement.
+    watchNpcReacted(NPC_ID, (newStanding) => {
+      applyStanding(newStanding);
+      txStatusEl.textContent = '⚡ Aiden retaliates autonomously!';
+      setTimeout(() => { txStatusEl.textContent = ''; }, 4000);
     });
   } catch (err) {
     statusEl.textContent = `Contract read failed: ${err.shortMessage ?? err.message}`;

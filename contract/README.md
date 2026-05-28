@@ -209,17 +209,73 @@ Emitted when `registerNPC` succeeds.
 **`Interacted(uint256 indexed npcId, address indexed player, uint8 action, int256 newStanding)`**
 Emitted on every `interact` call. Subscribe to this for real-time standing updates.
 
+**`NpcReacted(uint256 indexed npcId, address indexed player, string reaction, int256 newStanding)`**
+Emitted by `applyReactivePenalty`. Fired autonomously by the Somnia reactivity precompile — no human triggers it.
+
+### Reactive extension points
+
+#### `authorizeHandler(address handler)`
+Authorises `AidenReactiveHandler` to call `applyReactivePenalty`. Only the deployer (owner) can call this.
+
+#### `applyReactivePenalty(uint256 npcId, address player, int256 delta)`
+Called by the authorised handler to apply an autonomous standing change. Reverts if the caller is not the authorised handler.
+
+---
+
+## Somnia Reactivity — autonomous retaliation
+
+When a player betrays Aiden and their standing drops below −10, the Somnia blockchain automatically calls `AidenReactiveHandler._onEvent` — an additional −10 penalty is applied with no human triggering it. The full chain of events:
+
+```
+Player clicks "Betray"
+       ↓
+AidenAgent.interact() → standing −15, emits Interacted(npcId, player, Betray, −15)
+       ↓
+Somnia reactivity precompile detects Interacted matches the subscription filter
+       ↓
+Precompile calls AidenReactiveHandler.onEvent() — autonomously, on-chain
+       ↓
+Handler decodes event: action=Betray, newStanding=−15 < −10 threshold
+       ↓
+Handler calls AidenAgent.applyReactivePenalty(npcId, player, −10)
+       ↓
+AidenAgent.standing −10 more → emits NpcReacted(npcId, player, "Aiden retaliates", −25)
+       ↓
+Web client receives NpcReacted event, updates standing display autonomously
+```
+
+### Deploy the reactive handler
+
+```bash
+# 1. Deploy AidenReactiveHandler
+forge create src/AidenReactiveHandler.sol:AidenReactiveHandler \
+  --constructor-args $AGENT_ADDRESS \
+  --rpc-url https://dream-rpc.somnia.network \
+  --private-key $PRIVATE_KEY \
+  --legacy --broadcast
+
+# 2. Authorise the handler on AidenAgent
+cast send $AGENT_ADDRESS "authorizeHandler(address)" $HANDLER_ADDRESS \
+  --rpc-url https://dream-rpc.somnia.network \
+  --private-key $PRIVATE_KEY --legacy
+
+# 3. Register the Somnia Reactivity subscription (wallet needs >= 32 STT)
+export AGENT_ADDRESS=0x...
+export HANDLER_ADDRESS=0x...
+npx tsx script/RegisterReactivity.ts
+```
+
 ---
 
 ## Run tests
 
 ```bash
 forge test
-# Runs all 9 unit tests
+# Runs all 15 unit tests (9 AidenAgent + 6 AidenReactiveHandler)
 forge test -v
 # Verbose: shows each test name and gas cost
-forge test --match-test testBetrayDecreasesStanding
+forge test --match-test testBetrayBelowThresholdAppliesPenalty
 # Run a single test by name
 ```
 
-All 9 tests must pass before deploying.
+All 15 tests must pass before deploying.

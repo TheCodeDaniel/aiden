@@ -81,4 +81,19 @@ export const ABI = [
       { name: 'newStanding', type: 'int256', indexed: false },
     ],
   },
+
+  // ── NpcReacted event ───────────────────────────────────────────────────────
+  // Emitted by applyReactivePenalty when the Somnia reactivity precompile
+  // autonomously calls the handler after a Betray that drops standing below -10.
+  // No human triggers this — it fires on its own.
+  {
+    name: 'NpcReacted',
+    type: 'event',
+    inputs: [
+      { name: 'npcId',      type: 'uint256', indexed: true },
+      { name: 'player',     type: 'address', indexed: true },
+      { name: 'reaction',   type: 'string',  indexed: false },
+      { name: 'newStanding',type: 'int256',  indexed: false },
+    ],
+  },
 ];

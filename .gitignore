@@ -8,6 +8,9 @@ contract/broadcast/
 web/node_modules/
 web/dist/
 
+# Contract npm dependencies
+contract/node_modules/
+
 # OS / editor noise
 .DS_Store
 .claude/
